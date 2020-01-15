@@ -86,6 +86,10 @@ func New(chain *chain.Chain, stateCreator *state.Creator, options Options) *TxPo
 	return pool
 }
 
+func (p *TxPool) Size() int {
+	return p.all.Len()
+}
+
 func (p *TxPool) housekeeping() {
 	log.Debug("enter housekeeping")
 	defer log.Debug("leave housekeeping")
@@ -110,6 +114,7 @@ func (p *TxPool) housekeeping() {
 				continue
 			}
 			poolLen := p.all.Len()
+			// log.Info("size", "len", poolLen)
 			// do wash on
 			// 1. head block changed
 			// 2. pool size exceeds limit
