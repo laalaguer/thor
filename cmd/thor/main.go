@@ -103,8 +103,8 @@ func main() {
 					pprofFlag,
 					verifyLogsFlag,
 					skipLogsFlag,
-					txPoolLengthFlag,
-					txPoolLimitAccountFlag,
+					txPoolLimitFlag,
+					txPoolLimitPerAccountFlag,
 				},
 				Action: soloAction,
 			},
@@ -236,8 +236,8 @@ func soloAction(ctx *cli.Context) error {
 	}
 
 	txPoolOption := defaultTxPoolOptions
-	txPoolOption.Limit = ctx.Int(txPoolLengthFlag.Name)
-	txPoolOption.LimitPerAccount = ctx.Int(txPoolLimitAccountFlag.Name)
+	txPoolOption.Limit = ctx.Int(txPoolLimitFlag.Name)
+	txPoolOption.LimitPerAccount = ctx.Int(txPoolLimitPerAccountFlag.Name)
 
 	txPool := txpool.New(chain, state.NewCreator(mainDB), txPoolOption)
 	defer func() { log.Info("closing tx pool..."); txPool.Close() }()
@@ -267,6 +267,7 @@ func soloAction(ctx *cli.Context) error {
 		txPool,
 		uint64(ctx.Int(gasLimitFlag.Name)),
 		ctx.Bool(onDemandFlag.Name),
+		skipLogs,
 		forkConfig).Run(exitSignal)
 }
 

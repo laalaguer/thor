@@ -40,6 +40,7 @@ type Solo struct {
 	bestBlockCh chan *block.Block
 	gasLimit    uint64
 	onDemand    bool
+	skipLogs    bool
 }
 
 // New returns Solo instance
@@ -50,6 +51,7 @@ func New(
 	txPool *txpool.TxPool,
 	gasLimit uint64,
 	onDemand bool,
+	skipLogs bool,
 	forkConfig thor.ForkConfig,
 ) *Solo {
 	return &Solo{
@@ -63,6 +65,7 @@ func New(
 			forkConfig),
 		logDB:    logDB,
 		gasLimit: gasLimit,
+		skipLogs: skipLogs,
 		onDemand: onDemand,
 	}
 }
@@ -201,13 +204,15 @@ func (s *Solo) packing(pendingTxs tx.Transactions) (mclock.AbsTime, error) {
 		return 0, errors.WithMessage(err, "commit block")
 	}
 
-	task := s.logDB.NewTask().ForBlock(b.Header())
-	for i, tx := range b.Transactions() {
-		origin, _ := tx.Origin()
-		task.Write(tx.ID(), origin, receipts[i].Outputs)
-	}
-	if err := task.Commit(); err != nil {
-		return 0, errors.WithMessage(err, "commit log")
+	if !s.skipLogs {
+		task := s.logDB.NewTask().ForBlock(b.Header())
+		for i, tx := range b.Transactions() {
+			origin, _ := tx.Origin()
+			task.Write(tx.ID(), origin, receipts[i].Outputs)
+		}
+		if err := task.Commit(); err != nil {
+			return 0, errors.WithMessage(err, "commit log")
+		}
 	}
 
 	// All time include exec and commit to disk.
