@@ -128,12 +128,12 @@ var (
 		Name:  "skip-txpool-blocklist",
 		Usage: "skip applying txpool blocklist",
 	}
-	txPoolLengthFlag = cli.IntFlag{
+	txPoolLimitFlag = cli.IntFlag{
 		Name:  "txpool-limit",
 		Value: 10000,
 		Usage: "set tx limit in pool",
 	}
-	txPoolLimitAccountFlag = cli.IntFlag{
+	txPoolLimitPerAccountFlag = cli.IntFlag{
 		Name:  "txpool-limit-per-account",
 		Value: 16,
 		Usage: "set tx limit per account in pool",
