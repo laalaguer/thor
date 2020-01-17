@@ -29,6 +29,7 @@ import (
 )
 
 var log = log15.New()
+var maxPackDuration, _ = time.ParseDuration("10s")
 
 // Solo mode is the standalone client without p2p server
 type Solo struct {
@@ -94,7 +95,7 @@ func (s *Solo) loop(ctx context.Context) {
 	txEvCh := make(chan *txpool.TxEvent, 10)
 	scope.Track(s.txPool.SubscribeTxEvent(txEvCh))
 
-	if err := s.packing(nil); err != nil {
+	if _, err := s.packing(nil); err != nil {
 		log.Error("failed to pack block", "err", err)
 	}
 
@@ -109,7 +110,7 @@ func (s *Solo) loop(ctx context.Context) {
 			// origin, _ := newTx.Origin()
 			// log.Info("new Tx", "id", newTx.ID(), "origin", origin)
 			if s.onDemand {
-				if err := s.packing(tx.Transactions{newTx}); err != nil {
+				if _, err := s.packing(tx.Transactions{newTx}); err != nil {
 					log.Error("failed to pack block", "err", err)
 				}
 			}
@@ -117,14 +118,35 @@ func (s *Solo) loop(ctx context.Context) {
 			if s.onDemand {
 				continue
 			}
-			if err := s.packing(s.txPool.Executables()); err != nil {
+
+			packDuration, err := s.packing(s.txPool.Executables())
+			if err != nil {
 				log.Error("failed to pack block", "err", err)
+			} else {
+				newGasLimit := reCalculateGasLimit(packDuration, maxPackDuration, s.gasLimit)
+				log.Info("gaslimit", "old", s.gasLimit, "new", newGasLimit)
+				s.gasLimit = newGasLimit
 			}
+
 		}
 	}
 }
 
-func (s *Solo) packing(pendingTxs tx.Transactions) error {
+// reCalculateGasLimit calculates the new gaslimit accordign to the durations.
+func reCalculateGasLimit(used mclock.AbsTime, expected time.Duration, nowGasLimit uint64) uint64 {
+	var a = int64(used)
+	var b = int64(expected)
+	if a <= b {
+		return nowGasLimit
+	}
+
+	// a > b
+	var ratio = int64(float64(b) / float64(a) * 100)
+	var d uint64 = uint64(ratio) * nowGasLimit / 100
+	return d
+}
+
+func (s *Solo) packing(pendingTxs tx.Transactions) (mclock.AbsTime, error) {
 	// Note: Add pool size transparency.
 	log.Info("pool", "pending", len(pendingTxs), "executables", s.txPool.ExcecutableSize(), "size", s.txPool.Size())
 
@@ -138,7 +160,7 @@ func (s *Solo) packing(pendingTxs tx.Transactions) error {
 
 	flow, err := s.packer.Mock(best.Header(), uint64(time.Now().Unix()), s.gasLimit)
 	if err != nil {
-		return errors.WithMessage(err, "mock packer")
+		return 0, errors.WithMessage(err, "mock packer")
 	}
 
 	startTime := mclock.Now()
@@ -156,24 +178,24 @@ func (s *Solo) packing(pendingTxs tx.Transactions) error {
 
 	b, stage, receipts, err := flow.Pack(genesis.DevAccounts()[0].PrivateKey)
 	if err != nil {
-		return errors.WithMessage(err, "pack")
+		return 0, errors.WithMessage(err, "pack")
 	}
 	// Total time for adopt tx(s) and packing (CPU works in memory)
 	execElapsed := mclock.Now() - startTime
 
 	// If there is no tx packed in the on-demand mode then skip
 	if s.onDemand && len(b.Transactions()) == 0 {
-		return nil
+		return execElapsed, nil
 	}
 
 	if _, err := stage.Commit(); err != nil {
-		return errors.WithMessage(err, "commit state")
+		return 0, errors.WithMessage(err, "commit state")
 	}
 
 	// ignore fork when solo
 	_, err = s.chain.AddBlock(b, receipts)
 	if err != nil {
-		return errors.WithMessage(err, "commit block")
+		return 0, errors.WithMessage(err, "commit block")
 	}
 
 	task := s.logDB.NewTask().ForBlock(b.Header())
@@ -182,7 +204,7 @@ func (s *Solo) packing(pendingTxs tx.Transactions) error {
 		task.Write(tx.ID(), origin, receipts[i].Outputs)
 	}
 	if err := task.Commit(); err != nil {
-		return errors.WithMessage(err, "commit log")
+		return 0, errors.WithMessage(err, "commit log")
 	}
 
 	// All time include exec and commit to disk.
@@ -201,5 +223,5 @@ func (s *Solo) packing(pendingTxs tx.Transactions) error {
 	)
 	log.Debug(b.String())
 
-	return nil
+	return totalElapsed, nil
 }
