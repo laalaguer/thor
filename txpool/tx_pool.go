@@ -86,6 +86,16 @@ func New(chain *chain.Chain, stateCreator *state.Creator, options Options) *TxPo
 	return pool
 }
 
+// Size returns the size of all transactions.
+func (p *TxPool) Size() int {
+	return p.all.Len()
+}
+
+// ExcecutableSize returns the size of all executable txs.
+func (p *TxPool) ExcecutableSize() int {
+	return len(p.Executables())
+}
+
 func (p *TxPool) housekeeping() {
 	log.Debug("enter housekeeping")
 	defer log.Debug("leave housekeeping")

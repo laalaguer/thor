@@ -104,8 +104,9 @@ func (s *Solo) loop(ctx context.Context) {
 			return
 		case txEv := <-txEvCh:
 			newTx := txEv.Tx
-			origin, _ := newTx.Origin()
-			log.Info("new Tx", "id", newTx.ID(), "origin", origin)
+			// Note: Remove log info to avoid annoying.
+			// origin, _ := newTx.Origin()
+			// log.Info("new Tx", "id", newTx.ID(), "origin", origin)
 			if s.onDemand {
 				if err := s.packing(tx.Transactions{newTx}); err != nil {
 					log.Error("failed to pack block", "err", err)
@@ -123,6 +124,9 @@ func (s *Solo) loop(ctx context.Context) {
 }
 
 func (s *Solo) packing(pendingTxs tx.Transactions) error {
+	// Note: Add pool size transparency.
+	log.Info("pool", "pending", len(pendingTxs), "executables", s.txPool.ExcecutableSize(), "size", s.txPool.Size())
+
 	best := s.chain.BestBlock()
 	var txsToRemove []*tx.Transaction
 	defer func() {
