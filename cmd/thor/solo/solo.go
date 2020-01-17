@@ -194,9 +194,9 @@ func (s *Solo) packing(pendingTxs tx.Transactions) error {
 	log.Info("📦 new block packed",
 		"txs", len(receipts),
 		"mgas", float64(b.Header().GasUsed())/1000/1000,
-		"mgas/s", float64(b.Header().GasUsed())/1000/1000/(float64(totalElapsed)*(math.Pow10(9))),
-		// calc time | disk time
-		"et", fmt.Sprintf("%v|%v", common.PrettyDuration(execElapsed), common.PrettyDuration(commitElapsed)),
+		"mgas/s", float64(b.Header().GasUsed())/1000/1000/(float64(totalElapsed)/(math.Pow10(9))),
+		// calc time | disk time | total time
+		"et", fmt.Sprintf("%v|%v|%v", common.PrettyDuration(execElapsed), common.PrettyDuration(commitElapsed), common.PrettyDuration(totalElapsed)),
 		"id", fmt.Sprintf("[#%v…%x]", block.Number(blockID), blockID[28:]),
 	)
 	log.Debug(b.String())
