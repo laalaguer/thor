@@ -137,6 +137,9 @@ func reCalculateGasLimit(used mclock.AbsTime, expected time.Duration, nowGasLimi
 	var a = int64(used)
 	var b = int64(expected)
 	if a <= b {
+		if float64(a)/float64(b) < 0.8 { // we execute too fast.
+			return 110 * nowGasLimit / 100
+		}
 		return nowGasLimit
 	}
 
