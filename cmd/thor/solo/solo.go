@@ -8,6 +8,7 @@ package solo
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -157,6 +158,7 @@ func (s *Solo) packing(pendingTxs tx.Transactions) error {
 	if err != nil {
 		return errors.WithMessage(err, "pack")
 	}
+	// Total time for adopt tx(s) and packing (CPU works in memory)
 	execElapsed := mclock.Now() - startTime
 
 	// If there is no tx packed in the on-demand mode then skip
@@ -183,12 +185,17 @@ func (s *Solo) packing(pendingTxs tx.Transactions) error {
 		return errors.WithMessage(err, "commit log")
 	}
 
-	commitElapsed := mclock.Now() - startTime - execElapsed
+	// All time include exec and commit to disk.
+	totalElapsed := mclock.Now() - startTime
+	// Total time for commit block and state and log (Disk operation.)
+	commitElapsed := totalElapsed - execElapsed
 
 	blockID := b.Header().ID()
 	log.Info("📦 new block packed",
 		"txs", len(receipts),
 		"mgas", float64(b.Header().GasUsed())/1000/1000,
+		"mgas/s", float64(b.Header().GasUsed())/1000/1000/(float64(totalElapsed)*(math.Pow10(9))),
+		// calc time | disk time
 		"et", fmt.Sprintf("%v|%v", common.PrettyDuration(execElapsed), common.PrettyDuration(commitElapsed)),
 		"id", fmt.Sprintf("[#%v…%x]", block.Number(blockID), blockID[28:]),
 	)
