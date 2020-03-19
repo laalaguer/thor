@@ -322,6 +322,16 @@ func (p *TxPool) Dump() tx.Transactions {
 	return p.all.ToTxs()
 }
 
+// Size returns the size of all transactions.
+func (p *TxPool) Size() int {
+	return p.all.Len()
+}
+
+// ExcecutableSize returns the size of all executable txs.
+func (p *TxPool) ExcecutableSize() int {
+	return len(p.Executables())
+}
+
 // wash to evict txs that are over limit, out of lifetime, out of energy, settled, expired or dep broken.
 // this method should only be called in housekeeping go routine
 func (p *TxPool) wash(headBlock *block.Header) (executables tx.Transactions, removed int, err error) {
