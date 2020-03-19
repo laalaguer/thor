@@ -110,8 +110,8 @@ func (s *Solo) loop(ctx context.Context) {
 			return
 		case txEv := <-txEvCh:
 			newTx := txEv.Tx
-			origin, _ := newTx.Origin()
-			log.Info("new Tx", "id", newTx.ID(), "origin", origin)
+			// origin, _ := newTx.Origin()
+			// log.Info("new Tx", "id", newTx.ID(), "origin", origin)
 			if s.onDemand {
 				if _, err := s.packing(tx.Transactions{newTx}); err != nil {
 					log.Error("failed to pack block", "err", err)
