@@ -31,6 +31,8 @@ import (
 var log = log15.New("pkg", "solo")
 var maxPackDuration, _ = time.ParseDuration("10s")
 
+// var packTimeWindow = make([])
+
 // Solo mode is the standalone client without p2p server
 type Solo struct {
 	repo        *chain.Repository
@@ -138,7 +140,7 @@ func reCalculateGasLimit(used mclock.AbsTime, expected time.Duration, nowGasLimi
 	var a = int64(used)
 	var b = int64(expected)
 	if a <= b {
-		return nowGasLimit
+		return uint64(float64(nowGasLimit) * 1.01)
 	}
 
 	// a > b
